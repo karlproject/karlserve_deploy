@@ -15,8 +15,8 @@ setup(name='karlserve_gocept',
       install_requires = requires,
       entry_points = """\
       [karlserve.scripts]
-      upgrade = production.upgrade:config_upgrade
-      cleanup = production.cleanup:config_parser
+      upgrade = karlserve_gocept.upgrade:config_upgrade
+      cleanup = karlserve_gocept.cleanup:config_parser
       """
       )
 
