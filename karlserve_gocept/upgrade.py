@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import sys
@@ -6,9 +7,6 @@ import time
 from karlserve.scripts.utils import shell
 from karlserve.scripts.utils import shell_capture
 from karlserve.scripts.utils import shell_script
-
-from karlserve_gocept.utils import zeoinst
-
 
 log = logging.getLogger(__name__)
 
@@ -48,30 +46,29 @@ def upgrade(args):
     shell('bin/buildout')
 
     # See whether this update requires an evolution step. If upgrade requires
-    # an evolution step, we make new copies of all instance databases before
-    # running evolution.
+    # an evolution step, we make backups of the instance databases before
+    # running evolve.
     evolve_output = shell_capture('bin/karlserve evolve')
     needs_evolution = 'Not evolving' in evolve_output
     if needs_evolution:
         log.info("Evolution required.")
 
-        # Make copy of database while current build is still running.  (Uses
-        # rsync.)
-        for name in args.instances:
-            instance = args.get_instance(name)
-            zeoinst('prep', instance.config)
-
-        # Put the current build into maintenance mode
+        # Put current build into readonly mode
         os.chdir(args.current_build)
-        _maint_mode()
+        set_mode('readonly', name)
 
-        # Incrementally copy any new data in database since first copy was
-        # initiated. (Uses rsync.)
+        # Dump databases for backup
         for name in args.instances:
             instance = args.get_instance(name)
-            zeoinst('update', instance.config)
 
-        # Run evolution step against new copy of database
+
+            dbargs = parse_dsn(instance.config['dsn'])
+            dumpfile = '%s-%s.dump' % (dbargs['dbname'],
+                datetime.datetime.now().strftime('%Y.%m.%d.%H.%M.%S'))
+            shell('ssh %s pg_dump -u %s -f %s -F c %s' %
+                  (dbargs['host'], dbargs['user'], dumpfile, dbargs['dbname']))
+
+        # Run evolution step in next build
         os.chdir(args.next_build)
         shell('bin/karlserve evolve --latest')
 
@@ -95,6 +92,7 @@ def upgrade(args):
     os.chdir(args.next_build)
     shell('bin/supervisord')
 
+
 def migrate(args):
     # Calculate paths and do some sanity checking
     _get_paths(args)
@@ -110,13 +108,13 @@ def migrate(args):
 
 
 def migrate_instance(name, args):
-    _maint_mode(name)
+    set_mode('maintenance', name)
     instance = args.get_instance(name)
     zeoinst('migrate', instance.config)
     karl_ini = instance.config.get('migration.karl_ini')
     shell('bin/karlserve migrate %s %s' % (name, karl_ini))
     shell('bin/karlserve evolve -I %s --latest' % name)
-    _normal_mode(name)
+    set_mode('normal', name)
 
 
 def _get_paths(args):
@@ -129,17 +127,17 @@ def _get_paths(args):
     args.next_build = os.path.join(base, next_index)
 
 
-def _maint_mode(name=None):
+def set_mode(mode, name=None):
     if name:
-        shell('bin/karlserve mode -I %s -s maintenance' % name)
+        shell('bin/karlserve mode -I %s -s %s' % (name, mode))
     else:
-        shell('bin/karlserve mode -s maintenance')
+        shell('bin/karlserve mode -s %s' % mode)
     shell('bin/supervisorctl reload')
 
 
-def _normal_mode(name=None):
-    if name:
-        shell('bin/karlserve mode -I %s -s normal' % name)
-    else:
-        shell('bin/karlserve mode -s normal')
-    shell('bin/supervisorctl reload')
+def parse_dsn(dsn):
+    args = []
+    for item in dsn.split():
+        name, value = item.split('=')
+        args[name] = value.strip("'")
+    return args

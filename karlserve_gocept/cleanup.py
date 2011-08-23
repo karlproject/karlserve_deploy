@@ -2,7 +2,9 @@ import os
 import shutil
 import sys
 
-from karlserve_gocept.utils import zeoinst
+
+def zeoinst(*args, **kw):
+    raise NotImplementedError()
 
 
 def config_parser(name, subparsers, **helpers):
