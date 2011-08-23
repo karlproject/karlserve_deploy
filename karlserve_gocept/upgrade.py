@@ -55,7 +55,7 @@ def upgrade(args):
 
         # Put current build into readonly mode
         os.chdir(args.current_build)
-        set_mode('readonly', name)
+        set_mode('readonly')
 
         # Dump databases for backup
         for name in args.instances:
@@ -136,7 +136,7 @@ def set_mode(mode, name=None):
 
 
 def parse_dsn(dsn):
-    args = []
+    args = {}
     for item in dsn.split():
         name, value = item.split('=')
         args[name] = value.strip("'")
