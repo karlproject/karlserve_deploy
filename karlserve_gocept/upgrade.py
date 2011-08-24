@@ -102,10 +102,6 @@ def migrate(args):
     if args.this_build != args.current_build:
         args.parser.error("Upgrade must be run from current build.")
 
-    # Upgrade code in place (we're not really production, yet)
-    os.chdir(args.current_build)
-    shell('bin/buildout')
-
     for name in args.instances:
         migrate_instance(name, args)
 
@@ -113,6 +109,16 @@ def migrate(args):
 def migrate_instance(name, args):
     instance = args.get_instance(name)
     config = instance.config
+
+    # Is there any migration to do for this instance?
+    do_migration = False
+    for key in config:
+        if key.startswith('migration'):
+            do_migration = True
+            break
+
+    if not do_migration:
+        return
 
     # Put instance in maintenance mode
     set_mode('maintenance', name)
@@ -160,17 +166,27 @@ def migrate_instance(name, args):
     finally:
         shutil.rmtree(tmp)
 
-    # Copy pgtextindex and repozitory
-    src_dsn = parse_dsn(config['migration.dsn'])
-    pg_dump = 'pg_dump -h localhost -U %s %s' % (
-        src_dsn['user'], src_dsn['dbname'])
-    pg_restore = 'psql -h localhost -U %s -q %s' % (
-        dsn['user'], dsn['dbname'])
-    script = 'ssh %s %s | %s' % (src_dsn['host'], pg_dump, pg_restore)
-    shell_pipe('ssh %s' % dsn['host'], script)
+    if 'migration.dsn' in config:
+        # Copy pgtextindex and repozitory
+        src_dsn = parse_dsn(config['migration.dsn'])
+        pg_dump = 'pg_dump -h localhost -U %s %s' % (
+            src_dsn['user'], src_dsn['dbname'])
+        pg_restore = 'psql -h localhost -U %s -q %s' % (
+            dsn['user'], dsn['dbname'])
+        script = 'ssh %s %s | %s' % (src_dsn['host'], pg_dump, pg_restore)
+        shell_pipe('ssh %s' % dsn['host'], script)
+        reindex_text = False
+
+    else:
+        # Initialize pgtextindex and repozitory
+        shell('bin/karlserve init_repozitory %s' % name)
+        reindex_text = True
 
     shell('bin/karlserve evolve -I %s --latest' % name)
     set_mode('normal', name)
+
+    if reindex_text:
+        shell('bin/karlserve reindex_text --pg %s' % name)
 
 
 def _get_paths(args):
