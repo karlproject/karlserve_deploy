@@ -1,11 +1,15 @@
 import datetime
 import logging
 import os
+import pylibmc
+import shutil
 import sys
+import tempfile
 import time
 
 from karlserve.scripts.utils import shell
 from karlserve.scripts.utils import shell_capture
+from karlserve.scripts.utils import shell_pipe
 from karlserve.scripts.utils import shell_script
 
 log = logging.getLogger(__name__)
@@ -101,18 +105,71 @@ def migrate(args):
 
     # Upgrade code in place (we're not really production, yet)
     os.chdir(args.current_build)
-    shell('bin/buildout')
+    shell('bin/buildout -No')
 
     for name in args.instances:
         migrate_instance(name, args)
 
 
 def migrate_instance(name, args):
-    set_mode('maintenance', name)
     instance = args.get_instance(name)
-    zeoinst('migrate', instance.config)
-    karl_ini = instance.config.get('migration.karl_ini')
-    shell('bin/karlserve migrate %s %s' % (name, karl_ini))
+    config = instance.config
+
+    # Put instance in maintenance mode
+    set_mode('maintenance', name)
+
+    # Copy production data locally
+    var = config['var']
+    migration_data = os.path.join(var, 'migration', name)
+    if not os.path.exists(migration_data):
+        os.makedirs(migration_data)
+    src = config['migration.db_file']
+    dbfile = os.path.join(migration_data, 'karl.db')
+    shell('rsync -z %s %s' % (src, dbfile))
+    src = config['migration.blobs']
+    blobdir = os.path.join(migration_data, 'blobs')
+    if not os.path.exists(blobdir):
+        os.mkdir(blobdir)
+    shell('rsync -az --progress %s/ %s/' % (src, blobdir))
+
+    # Clear memcached
+    cache_servers = config.get('relstorage.cache_servers', None)
+    if cache_servers is not None:
+        print "Clearing memcached..."
+        cache = pylibmc.Client(cache_servers.split(), binary=True)
+        cache.flush_all()
+        del cache
+
+    # Delete current relstorage db
+    dsn = parse_dsn(config['dsn'])
+    ssh_host = 'postgres@%s' % dsn['host']
+    shell('ssh %s dropdb %s' % (ssh_host, dsn['dbname']))
+    shell('ssh %s createdb -O %s %s' % (ssh_host, dsn['user'], dsn['dbname']))
+
+    # Convert ZEO data to relstorage
+    tmp = tempfile.mkdtemp()
+    try:
+        zconfig = os.path.join(tmp, 'zodbconvert.conf')
+        with open(zconfig, 'w') as out:
+            out.write(zodbconvert_conf_template % {
+                'blobdir': blobdir,
+                'blob_cache': config['blob_cache'],
+                'dbfile': dbfile,
+                'dsn': config['dsn'],
+            })
+        shell('bin/zodbconvert %s' % zconfig)
+    finally:
+        shutil.rmtree(tmp)
+
+    # Copy pgtextindex and repozitory
+    src_dsn = parse_dsn(config['migration.dsn'])
+    pg_dump = 'pg_dump -h localhost -U %s %s' % (
+        src_dsn['user'], src_dsn['dbname'])
+    pg_restore = 'psql -h localhost -U %s -q %s' % (
+        dsn['user'], dsn['dbname'])
+    script = 'ssh %s %s | %s' % (src_dsn['host'], pg_dump, pg_restore)
+    shell_pipe('ssh %s' % dsn['host'], script)
+
     shell('bin/karlserve evolve -I %s --latest' % name)
     set_mode('normal', name)
 
@@ -141,3 +198,23 @@ def parse_dsn(dsn):
         name, value = item.split('=')
         args[name] = value.strip("'")
     return args
+
+
+zodbconvert_conf_template = """\
+<blobstorage source>
+    blob-dir %(blobdir)s
+    <filestorage>
+        path %(dbfile)s
+    </filestorage>
+</blobstorage>
+
+<relstorage destination>
+    <postgresql>
+        dsn %(dsn)s
+    </postgresql>
+    keep-history False
+    shared-blob-dir False
+    blob-dir %(blob_cache)s
+    blob-cache-size 5gb
+</relstorage>
+"""
