@@ -182,6 +182,10 @@ def migrate_instance(name, args):
         shell('bin/karlserve init_repozitory %s' % name)
         reindex_text = True
 
+    karl_ini = config.get('migration.karl_ini')
+    if karl_ini is not None:
+        shell('bin/karlserve migrate_ini %s %s' % (name, karl_ini))
+
     shell('bin/karlserve evolve -I %s --latest' % name)
     set_mode('normal', name)
 
