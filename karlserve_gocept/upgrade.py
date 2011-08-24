@@ -105,7 +105,7 @@ def migrate(args):
 
     # Upgrade code in place (we're not really production, yet)
     os.chdir(args.current_build)
-    shell('bin/buildout -No')
+    shell('bin/buildout')
 
     for name in args.instances:
         migrate_instance(name, args)
