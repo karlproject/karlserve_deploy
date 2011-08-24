@@ -16,6 +16,7 @@ setup(name='karlserve_gocept',
       entry_points = """\
       [karlserve.scripts]
       upgrade = karlserve_gocept.upgrade:config_upgrade
+      migrate = karlserve_gocept.upgrade:config_migrate
       cleanup = karlserve_gocept.cleanup:config_parser
       """
       )

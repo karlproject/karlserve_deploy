@@ -18,14 +18,19 @@ log = logging.getLogger(__name__)
 def config_upgrade(name, subparsers, **helpers):
     parser = subparsers.add_parser(
         name, help='Upgrade production site.')
-    parser.add_argument('--migrate', action='store_true',
-                        help='Migrate data from old production.')
-    parser.set_defaults(func=main, parser=parser, instance=[],
+    parser.set_defaults(func=upgrade, parser=parser, instance=[],
+                        only_one=True, subsystem='upgrade')
+
+
+def config_migrate(name, subparsers, **helpers):
+    parser = subparsers.add_parser(
+        name, help='Migrate a site from an old installation.')
+    parser.set_defaults(func=migrate, parser=parser, instance=[],
                         only_one=True, subsystem='upgrade')
 
 
 @shell_script
-def main(args):
+def upgrade(args):
     # Calculate paths and do some sanity checking
     _get_paths(args)
     if args.this_build != args.current_build:
@@ -34,13 +39,6 @@ def main(args):
         args.parser.error("Next build directory already exists: %s" %
                           args.next_build)
 
-    if args.migrate:
-        migrate(args)
-    else:
-        upgrade(args)
-
-
-def upgrade(args):
     # Check out the next build and run the buildout
     git_url = args.get_setting('git_url')
     shell('git clone %s %s' % (git_url, args.next_build))
@@ -97,6 +95,7 @@ def upgrade(args):
     shell('bin/supervisord')
 
 
+@shell_script
 def migrate(args):
     # Calculate paths and do some sanity checking
     _get_paths(args)
