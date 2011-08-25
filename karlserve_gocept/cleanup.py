@@ -2,9 +2,9 @@ import os
 import shutil
 import sys
 
-
-def zeoinst(*args, **kw):
-    raise NotImplementedError()
+from karlserve.scripts.utils import shell
+from karlserve.scripts.utils import shell_capture
+from karlserve_gocept.utils import parse_dsn
 
 
 def config_parser(name, subparsers, **helpers):
@@ -12,22 +12,22 @@ def config_parser(name, subparsers, **helpers):
         name, help='Clean up old buildout folders.')
     parser.add_argument('--keep', type=int, default=2,
                         help='Number of buildout folders to keep, not including the current.')
-    parser.add_argument('--zeo', action='store_true', default=False,
-                        help='Also clean up old data folders in zeo instances.')
+    parser.add_argument('--dumps', action='store_true', default=False,
+                        help='Also clean up old data dumps on the db server.')
     parser.set_defaults(func=main, parser=parser, instance=[])
 
 
 def main(args):
+    if args.keep < 0:
+        args.parser.error("Argument to --keep must be 0 or greater.")
     cleanup(args)
-    if args.zeo:
+    if args.dumps:
         for name in args.instances:
-            instance = args.get_instance(name)
-            zeoinst('cleanup', instance.config, '--keep %d' % args.keep)
+            cleanup_dumps_instance(args, name)
 
 
 def cleanup(args):
-    if args.keep < 0:
-        args.parser.error("Argument to --keep must be 0 or greater.")
+    print "Cleaning up old build directories."
 
     # Get current build dir
     exe = os.path.realpath(sys.argv[0])
@@ -81,3 +81,41 @@ def cleanup(args):
             print "%d folders deleted." % count
     else:
         print "No folders deleted."
+
+
+def cleanup_dumps_instance(args, name):
+    print ""
+    print "Clean up dumps for %s." % name
+    instance = args.get_instance(name)
+    config = instance.config
+    dsn = parse_dsn(config['dsn'])
+    host = dsn['host']
+
+    ls = shell_capture('ssh %s ls backup' % host)
+    fnames = [name for name in ls.split()
+              if name.startswith(dsn['dbname']) and name.endswith('.dump')]
+
+    if len(fnames) <= args.keep:
+        print "Nothing to remove."
+        return
+
+    fnames.sort()
+    trash = fnames[:-args.keep]
+
+    print "The following dump files will be deleted:"
+    for fname in trash:
+        print "\t%s" % fname
+    print ""
+    answer = ''
+    while answer not in ('y', 'n', 'yes', 'no'):
+        answer = raw_input("Delete these folders? (y or n) ").lower()
+    if answer in ('y', 'yes'):
+        for fname in trash:
+            shell("ssh %s rm backup/%s" % (host, fname))
+        count = len(trash)
+        if count == 1:
+            print "One file deleted."
+        else:
+            print "%d files deleted." % count
+    else:
+        print "No files deleted."

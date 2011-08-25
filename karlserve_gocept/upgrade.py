@@ -11,6 +11,7 @@ from karlserve.scripts.utils import shell
 from karlserve.scripts.utils import shell_capture
 from karlserve.scripts.utils import shell_pipe
 from karlserve.scripts.utils import shell_script
+from karlserve_gocept.utils import parse_dsn
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ def upgrade(args):
     # an evolution step, we make backups of the instance databases before
     # running evolve.
     evolve_output = shell_capture('bin/karlserve evolve')
-    needs_evolution = 'Not evolving' in evolve_output
+    needs_evolution = True #'Not evolving' in evolve_output
     if needs_evolution:
         log.info("Evolution required.")
 
@@ -65,7 +66,7 @@ def upgrade(args):
 
 
             dbargs = parse_dsn(instance.config['dsn'])
-            dumpfile = '%s-%s.dump' % (dbargs['dbname'],
+            dumpfile = 'backup/%s-%s.dump' % (dbargs['dbname'],
                 datetime.datetime.now().strftime('%Y.%m.%d.%H.%M.%S'))
             shell('ssh %s pg_dump -h localhost -U %s -f %s -F c %s' %
                   (dbargs['host'], dbargs['user'], dumpfile, dbargs['dbname']))
@@ -209,14 +210,6 @@ def set_mode(mode, name=None):
     else:
         shell('bin/karlserve mode -s %s' % mode)
     shell('bin/supervisorctl reload')
-
-
-def parse_dsn(dsn):
-    args = {}
-    for item in dsn.split():
-        name, value = item.split('=')
-        args[name] = value.strip("'")
-    return args
 
 
 zodbconvert_conf_template = """\
