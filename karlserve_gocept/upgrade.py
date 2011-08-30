@@ -175,7 +175,10 @@ def migrate_instance(name, args):
             src_dsn['user'], src_dsn['dbname'])
         pg_restore = 'psql -h localhost -U %s -q %s' % (
             dsn['user'], dsn['dbname'])
-        script = 'ssh %s %s | %s' % (src_dsn['host'], pg_dump, pg_restore)
+        if src_dsn['host'] != dsn['host']:
+            script = 'ssh %s %s | %s' % (src_dsn['host'], pg_dump, pg_restore)
+        else:
+            script = "%s | %s" % (pg_dump, pg_restore)
         shell_pipe('ssh %s' % dsn['host'], script)
         reindex_text = False
 
