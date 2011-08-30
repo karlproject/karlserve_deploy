@@ -164,6 +164,7 @@ def migrate_instance(name, args):
                 'dsn': config['dsn'],
             })
         shell('bin/zodbconvert %s' % zconfig)
+        shell('rm -rf %s/*' % config['blob_cache'])
     finally:
         shutil.rmtree(tmp)
 
