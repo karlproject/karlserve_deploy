@@ -11,7 +11,7 @@ from karlserve.scripts.utils import shell
 from karlserve.scripts.utils import shell_capture
 from karlserve.scripts.utils import shell_pipe
 from karlserve.scripts.utils import shell_script
-from karlserve_gocept.utils import parse_dsn
+from karlserve_deploy.utils import parse_dsn
 
 log = logging.getLogger(__name__)
 

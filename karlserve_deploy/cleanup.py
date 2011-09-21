@@ -4,7 +4,7 @@ import sys
 
 from karlserve.scripts.utils import shell
 from karlserve.scripts.utils import shell_capture
-from karlserve_gocept.utils import parse_dsn
+from karlserve_deploy.utils import parse_dsn
 
 
 def config_parser(name, subparsers, **helpers):
