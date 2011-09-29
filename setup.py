@@ -15,9 +15,9 @@ setup(name='karlserve_deploy',
       install_requires = requires,
       entry_points = """\
       [karlserve.scripts]
-      upgrade = karlserve_gocept.upgrade:config_upgrade
-      migrate = karlserve_gocept.upgrade:config_migrate
-      cleanup = karlserve_gocept.cleanup:config_parser
+      upgrade = karlserve_deploy.upgrade:config_upgrade
+      migrate = karlserve_deploy.upgrade:config_migrate
+      cleanup = karlserve_deploy.cleanup:config_parser
       """
       )
 
