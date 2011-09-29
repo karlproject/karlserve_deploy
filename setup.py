@@ -6,7 +6,7 @@ requires = [
     'karlserve'
 ]
 
-setup(name='karlserve_gocept',
+setup(name='karlserve_deploy',
       version=__version__,
       description='Tools for Karl Production Install',
       packages=find_packages(),
