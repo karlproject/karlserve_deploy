@@ -53,7 +53,7 @@ def upgrade(args):
     # an evolution step, we make backups of the instance databases before
     # running evolve.
     evolve_output = shell_capture('bin/karlserve evolve')
-    needs_evolution = True #'Not evolving' in evolve_output
+    needs_evolution = 'Not evolving' in evolve_output
     if needs_evolution:
         log.info("Evolution required.")
 
