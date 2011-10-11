@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 try:
     import pylibmc
-else:
+except:
     pylibmc = None
 
 
