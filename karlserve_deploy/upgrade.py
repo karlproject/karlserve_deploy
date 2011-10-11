@@ -1,7 +1,6 @@
 import datetime
 import logging
 import os
-import pylibmc
 import shutil
 import sys
 import tempfile
@@ -14,6 +13,11 @@ from karlserve.scripts.utils import shell_script
 from karlserve_deploy.utils import parse_dsn
 
 log = logging.getLogger(__name__)
+
+try:
+    import pylibmc
+else:
+    pylibmc = None
 
 
 def config_upgrade(name, subparsers, **helpers):

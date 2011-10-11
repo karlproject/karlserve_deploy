@@ -1,6 +1,12 @@
 karlserve_gocept package Changelog
 ==================================
 
+Unreleased
+----------
+
+- Allow pylibmc to not be importable in the event that memcached is not being
+  used.
+
 0.4 (2011-09-30)
 ----------------
 
