@@ -7,6 +7,8 @@ Unreleased
 - Allow pylibmc to not be importable in the event that memcached is not being
   used.
 
+- Make remote postgres user configurable.
+
 0.4 (2011-09-30)
 ----------------
 
