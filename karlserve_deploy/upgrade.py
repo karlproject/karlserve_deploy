@@ -154,7 +154,7 @@ def migrate_instance(name, args):
 
     # Delete current relstorage db
     dsn = parse_dsn(config['dsn'])
-    ssh_host = '%s@%s' % (dsn['postgres_user'], dsn['host'])
+    ssh_host = '%s@%s' % (config['postgres_user'], dsn['host'])
     shell('ssh %s dropdb %s' % (ssh_host, dsn['dbname']))
     shell('ssh %s createdb -O %s %s' % (ssh_host, dsn['user'], dsn['dbname']))
 
