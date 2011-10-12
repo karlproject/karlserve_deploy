@@ -197,7 +197,7 @@ def migrate_instance(name, args):
     if karl_ini is not None:
         shell('bin/karlserve migrate_ini %s %s' % (name, karl_ini))
 
-    shell('bin/karlserve settings from_config -I %s' % name)
+    shell('bin/karlserve settings from_config %s' % name)
     shell('bin/karlserve evolve -I %s --latest' % name)
     set_mode('normal', name)
 
