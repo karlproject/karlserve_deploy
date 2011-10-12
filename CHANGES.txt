@@ -9,6 +9,8 @@ Unreleased
 
 - Make remote postgres user configurable.
 
+- Add call to 'karlserve settings from_config' to migration process.
+
 0.4 (2011-09-30)
 ----------------
 
