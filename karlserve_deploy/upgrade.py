@@ -30,7 +30,8 @@ def config_upgrade(name, subparsers, **helpers):
 def config_migrate(name, subparsers, **helpers):
     parser = subparsers.add_parser(
         name, help='Migrate a site from an old installation.')
-    parser.set_defaults(func=migrate, parser=parser, instance=[],
+    helpers['config_choose_instances'](parser)
+    parser.set_defaults(func=migrate, parser=parser,
                         only_one=True, subsystem='upgrade')
 
 
