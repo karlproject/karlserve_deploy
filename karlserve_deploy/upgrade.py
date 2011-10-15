@@ -132,8 +132,10 @@ def migrate_instance(name, args):
     set_mode('maintenance', name)
 
     # Copy production data locally
-    var = config['var']
-    migration_data = os.path.join(var, 'migration', name)
+    migration_data = config.get('migration.data')
+    if not migration_data:
+        var = config['var']
+        migration_data = os.path.join(var, 'migration', name)
     if not os.path.exists(migration_data):
         os.makedirs(migration_data)
     src = config['migration.db_file']
