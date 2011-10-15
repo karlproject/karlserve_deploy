@@ -11,6 +11,9 @@ Unreleased
 
 - Add call to 'karlserve settings from_config' to migration process.
 
+- Make directory where ZEO data is copied for migration to RelStorage
+  configurable as 'migration.data' config parameter.
+
 0.4 (2011-09-30)
 ----------------
 
