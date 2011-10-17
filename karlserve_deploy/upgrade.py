@@ -193,7 +193,8 @@ def migrate_instance(name, args):
 
     else:
         # Initialize pgtextindex and repozitory
-        shell('bin/karlserve init_repozitory %s' % name)
+        if 'repozitory_db_string' in config:
+            shell('bin/karlserve init_repozitory %s' % name)
         reindex_text = True
 
     karl_ini = config.get('migration.karl_ini')
