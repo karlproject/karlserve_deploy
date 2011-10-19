@@ -46,9 +46,14 @@ def upgrade(args):
                           args.next_build)
 
     # Check out the next build and run the buildout
-    git_url = args.get_setting('git_url')
-    branch = args.get_setting('git_branch', 'master')
-    shell('git clone --branch %s %s %s' % (branch, git_url, args.next_build))
+    svn_url = args.get_setting('svn_url', None)
+    if svn_url:
+        shell('svn co %s %s' % (svn_url, args.next_build))
+    else:
+        git_url = args.get_setting('git_url')
+        branch = args.get_setting('git_branch', 'master')
+        shell('git clone --branch %s %s %s' % (
+            branch, git_url, args.next_build))
     os.chdir(args.next_build)
     shell('virtualenv -p python2.6 --no-site-packages .')
     shell('bin/python bootstrap.py')
