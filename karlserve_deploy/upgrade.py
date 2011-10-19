@@ -55,7 +55,9 @@ def upgrade(args):
         shell('git clone --branch %s %s %s' % (
             branch, git_url, args.next_build))
     os.chdir(args.next_build)
-    shell('virtualenv -p python2.6 --no-site-packages .')
+    venv_cmd = 'virtualenv -p python2.6 --no-site-packages .'
+    venv_cmd = args.get_setting('build.virtualenv', venv_cmd)
+    shell(venv_cmd)
     shell('bin/python bootstrap.py')
     shell('bin/buildout')
 
