@@ -81,7 +81,7 @@ def upgrade(args):
             dbargs = parse_dsn(instance.config['dsn'])
             dumpfile = 'backup/%s-%s.dump' % (dbargs['dbname'],
                 datetime.datetime.now().strftime('%Y.%m.%d.%H.%M.%S'))
-            shell('ssh %s pg_dump -h localhost -U %s -f %s -F c %s' %
+            shell('ssh %s pg_dump -h localhost -U %s -f %s -F c -Z 0 %s' %
                   (dbargs['host'], dbargs['user'], dumpfile, dbargs['dbname']))
 
         # Run evolution step in next build
